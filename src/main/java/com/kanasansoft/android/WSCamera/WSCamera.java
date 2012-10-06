@@ -3,6 +3,16 @@ package com.kanasansoft.android.WSCamera;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
+import javax.servlet.http.HttpServletRequest;
+
+import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.websocket.WebSocket;
+import org.eclipse.jetty.websocket.WebSocketServlet;
+
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Rect;
@@ -10,6 +20,7 @@ import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.hardware.Camera.Parameters;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
 import android.view.SurfaceView;
@@ -19,6 +30,10 @@ import android.view.WindowManager;
 public class WSCamera extends Activity {
 
 	private Preview preview;
+
+	Server server = null;
+
+	byte[] captureData = null;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -30,6 +45,20 @@ public class WSCamera extends Activity {
 
 		preview = new Preview(this);
 
+		// http://code.google.com/p/android/issues/detail?id=9431
+		System.setProperty("java.net.preferIPv6Addresses", "false");
+
+		server = new Server(40320);
+
+		WSCameraServlet servlet = new WSCameraServlet();
+		ServletHolder sh = new ServletHolder(servlet);
+		ServletContextHandler sch = new ServletContextHandler();
+		sch.addServlet(sh, "/wscamera/ws");
+
+		HandlerList hl = new HandlerList();
+		hl.setHandlers(new Handler[] {sch});
+		server.setHandler(hl);
+
 		setContentView(preview);
 
 	}
@@ -37,11 +66,21 @@ public class WSCamera extends Activity {
 	@Override
 	protected void onResume() {
 		super.onResume();
+		try {
+			server.start();
+		} catch (Exception e) {
+			Log.e("WSCamera", e.getMessage());
+		}
 	}
 
 	@Override
 	protected void onPause() {
 		super.onPause();
+		try {
+			server.stop();
+		} catch (Exception e) {
+			Log.e("WSCamera", e.getMessage());
+		}
 	}
 
 	class ImageHandler implements Camera.PreviewCallback {
@@ -59,7 +98,7 @@ public class WSCamera extends Activity {
 			);
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			yuv.compressToJpeg(new Rect(0, 0, width, height), 0, baos);
-			byte[] jpeg = baos.toByteArray();
+			captureData = baos.toByteArray();
 		}
 
 	}
@@ -98,4 +137,39 @@ public class WSCamera extends Activity {
 		}
 
 	}
+
+	class WSCameraServlet extends WebSocketServlet {
+		private static final long serialVersionUID = 1L;
+		public WebSocket doWebSocketConnect(HttpServletRequest request, String protocol) {
+			return new WSCameraWebSocket();
+		}
+	}
+
+	class WSCameraWebSocket implements WebSocket.OnFrame {
+		private Connection connection = null;
+		public void onOpen(Connection connection) {
+			this.connection = connection;
+		}
+
+		public void onClose(int closeCode, String message) {
+			this.connection = null;
+		}
+
+		public boolean onFrame(byte flags, byte opcode, byte[] data, int offset, int length) {
+			byte[] sendData = captureData;
+			if (sendData == null) {
+				return false;
+			}
+			try {
+				connection.sendMessage(sendData, 0, sendData.length);
+			} catch (IOException e) {
+				Log.e("WSCamera", e.getMessage());
+			}
+			return false;
+		}
+
+		public void onHandshake(FrameConnection connection) {
+		}
+	}
+
 }
