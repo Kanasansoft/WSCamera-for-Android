@@ -23,7 +23,7 @@
           <resourceDirectory>${project.basedir}/res</resourceDirectory>
           <nativeLibrariesDirectory>${project.basedir}/src/main/native</nativeLibrariesDirectory>
           <sdk>
-            <platform>4</platform>
+            <platform>8</platform>
             <path>${user.home}/Developer/android-sdk-macosx</path>
           </sdk>
           <deleteConflictingFiles>true</deleteConflictingFiles>
