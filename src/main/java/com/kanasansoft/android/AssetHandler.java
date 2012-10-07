@@ -46,6 +46,12 @@ public class AssetHandler extends AbstractHandler {
 				contentType = URLConnection.guessContentTypeFromStream(bis);
 			} catch (NullPointerException e) {
 			}
+			if (contentType == null) {
+				try {
+					contentType = URLConnection.guessContentTypeFromName(target);
+				} catch (NullPointerException e) {
+				}
+			}
 
 			response.setContentType(contentType);
 			response.setStatus(HttpServletResponse.SC_OK);
