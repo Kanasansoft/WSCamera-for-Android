@@ -2,16 +2,20 @@ package com.kanasansoft.android.WSCamera;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import javax.servlet.http.HttpServletRequest;
 
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
+
+import com.kanasansoft.android.AssetHandler;
 
 import android.app.Activity;
 import android.content.Context;
@@ -50,13 +54,25 @@ public class WSCamera extends Activity {
 
 		server = new Server(40320);
 
-		WSCameraServlet servlet = new WSCameraServlet();
-		ServletHolder sh = new ServletHolder(servlet);
-		ServletContextHandler sch = new ServletContextHandler();
-		sch.addServlet(sh, "/wscamera/ws");
+		ArrayList<Handler> handlers = new ArrayList<Handler>();
+
+		{
+			AssetHandler ah = new AssetHandler(getResources().getAssets(), "html");
+			ContextHandler sch = new ContextHandler();
+			sch.setHandler(ah);
+			sch.setContextPath("/wscamera/html");
+			handlers.add(sch);
+		}
+		{
+			WSCameraServlet servlet = new WSCameraServlet();
+			ServletHolder sh = new ServletHolder(servlet);
+			ServletContextHandler sch = new ServletContextHandler();
+			sch.addServlet(sh, "/wscamera/ws");
+			handlers.add(sch);
+		}
 
 		HandlerList hl = new HandlerList();
-		hl.setHandlers(new Handler[] {sch});
+		hl.setHandlers(handlers.toArray(new Handler[]{}));
 		server.setHandler(hl);
 
 		setContentView(preview);
