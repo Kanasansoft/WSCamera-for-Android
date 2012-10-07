@@ -6,6 +6,9 @@
   <version>0.0.1-SNAPSHOT</version>
   <packaging>apk</packaging>
   <name>WSCamera for Android</name>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
   <scm>
     <connection>scm:git:git@github.com:Kanasansoft/WSCamera-for-Android.git</connection>
     <url>scm:git:git@github.com:Kanasansoft/WSCamera-for-Android.git</url>
@@ -49,6 +52,7 @@
         <configuration>
           <source>1.5</source>
           <target>1.5</target>
+          <encoding>UTF-8</encoding>
         </configuration>
       </plugin>
       <plugin>
