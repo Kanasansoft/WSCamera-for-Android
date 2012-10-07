@@ -113,7 +113,7 @@ public class WSCamera extends Activity {
 				null
 			);
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-			yuv.compressToJpeg(new Rect(0, 0, width, height), 0, baos);
+			yuv.compressToJpeg(new Rect(0, 0, width, height), 30, baos);
 			captureData = baos.toByteArray();
 		}
 
