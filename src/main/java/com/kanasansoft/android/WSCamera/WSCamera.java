@@ -142,6 +142,11 @@ public class WSCamera extends Activity {
 
 			camera = Camera.open();
 
+			Parameters params = camera.getParameters();
+			System.out.println(params.getPreviewFormat());
+			params.setPreviewFormat(ImageFormat.NV21);
+			camera.setParameters(params);
+
 			try {
 				camera.setPreviewDisplay(holder);
 			} catch (IOException e) {
