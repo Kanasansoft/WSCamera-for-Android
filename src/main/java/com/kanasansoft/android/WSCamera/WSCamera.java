@@ -34,6 +34,8 @@ import android.view.WindowManager;
 
 public class WSCamera extends Activity {
 
+	private static final String TAG = "WSCamera";
+
 	private Preview preview;
 
 	Server server = null;
@@ -47,7 +49,6 @@ public class WSCamera extends Activity {
 
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 		getWindow().requestFeature(Window.FEATURE_NO_TITLE);
-
 		preview = new Preview(this);
 
 		// http://code.google.com/p/android/issues/detail?id=9431
@@ -86,7 +87,7 @@ public class WSCamera extends Activity {
 		try {
 			server.start();
 		} catch (Exception e) {
-			Log.e("WSCamera", e.getMessage());
+			Log.e(TAG, e.getMessage(), e);
 		}
 	}
 
@@ -96,7 +97,7 @@ public class WSCamera extends Activity {
 		try {
 			server.stop();
 		} catch (Exception e) {
-			Log.e("WSCamera", e.getMessage());
+			Log.e(TAG, e.getMessage(), e);
 		}
 	}
 
@@ -144,7 +145,7 @@ public class WSCamera extends Activity {
 			try {
 				camera.setPreviewDisplay(holder);
 			} catch (IOException e) {
-				e.printStackTrace();
+				Log.e(TAG, e.getMessage(), e);
 			}
 			camera.setPreviewCallback(new ImageHandler());
 			camera.startPreview();
@@ -158,7 +159,7 @@ public class WSCamera extends Activity {
 			try {
 				camera.setPreviewDisplay(null);
 			} catch (IOException e) {
-				e.printStackTrace();
+				Log.e(TAG, e.getMessage(), e);
 			}
 
 			camera.release();
@@ -192,7 +193,7 @@ public class WSCamera extends Activity {
 			try {
 				connection.sendMessage(sendData, 0, sendData.length);
 			} catch (IOException e) {
-				Log.e("WSCamera", e.getMessage());
+				Log.e(TAG, e.getMessage(), e);
 			}
 			return false;
 		}
