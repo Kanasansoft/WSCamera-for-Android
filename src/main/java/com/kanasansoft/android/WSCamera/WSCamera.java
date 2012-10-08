@@ -18,6 +18,7 @@ import org.eclipse.jetty.websocket.WebSocketServlet;
 import com.kanasansoft.android.AssetHandler;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.graphics.ImageFormat;
 import android.graphics.Rect;
@@ -76,6 +77,12 @@ public class WSCamera extends Activity {
 		HandlerList hl = new HandlerList();
 		hl.setHandlers(handlers.toArray(new Handler[]{}));
 		server.setHandler(hl);
+
+		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+		alertDialogBuilder.setTitle("WSCamera is in streaming now.");
+		alertDialogBuilder.setMessage("http(s)://[IP address of this device]:40320/wscamera/html/index.html");
+		AlertDialog alertDialog = alertDialogBuilder.create();
+		alertDialog.show();
 
 		setContentView(preview);
 
