@@ -19,6 +19,7 @@ import com.kanasansoft.android.AssetHandler;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.ImageFormat;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.hardware.Camera;
@@ -137,19 +138,31 @@ public class WSCamera extends Activity {
 		}
 
 		public void surfaceCreated(SurfaceHolder holder) {
+
+			camera = Camera.open();
+
 			try {
-				camera = Camera.open();
-				camera.setPreviewCallback(new ImageHandler());
 				camera.setPreviewDisplay(holder);
-				camera.startPreview();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+			camera.setPreviewCallback(new ImageHandler());
+			camera.startPreview();
+
 		}
 
 		public void surfaceDestroyed(SurfaceHolder holder) {
+
 			camera.stopPreview();
+			camera.setPreviewCallback(null);
+			try {
+				camera.setPreviewDisplay(null);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
 			camera.release();
+
 		}
 
 	}
