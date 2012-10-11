@@ -48,12 +48,22 @@ public class WSCamera extends Activity {
 
 		super.onCreate(savedInstanceState);
 
+		// http://code.google.com/p/android/issues/detail?id=9431
+		System.setProperty("java.net.preferIPv6Addresses", "false");
+
+		initializeServer();
+
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 		getWindow().requestFeature(Window.FEATURE_NO_TITLE);
 		preview = new Preview(this);
 
-		// http://code.google.com/p/android/issues/detail?id=9431
-		System.setProperty("java.net.preferIPv6Addresses", "false");
+		setContentView(preview);
+
+		warnStreaming();
+
+	}
+
+	private void initializeServer() {
 
 		server = new Server(40320);
 
@@ -78,14 +88,14 @@ public class WSCamera extends Activity {
 		hl.setHandlers(handlers.toArray(new Handler[]{}));
 		server.setHandler(hl);
 
+	}
+
+	private void warnStreaming() {
 		AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
 		alertDialogBuilder.setTitle("WSCamera is in streaming now.");
 		alertDialogBuilder.setMessage("http(s)://[IP address of this device]:40320/wscamera/html/index.html");
 		AlertDialog alertDialog = alertDialogBuilder.create();
 		alertDialog.show();
-
-		setContentView(preview);
-
 	}
 
 	@Override
