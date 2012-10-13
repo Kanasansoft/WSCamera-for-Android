@@ -2,7 +2,11 @@ package com.kanasansoft.android.WSCamera;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.UUID;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -20,11 +24,14 @@ import com.kanasansoft.android.AssetHandler;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.graphics.ImageFormat;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.hardware.Camera.Parameters;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.SurfaceHolder;
@@ -40,6 +47,7 @@ public class WSCamera extends Activity {
 	private Preview preview;
 
 	Server server = null;
+	UPnPServer upnpServer = null;
 
 	byte[] captureData = null;
 
@@ -52,6 +60,7 @@ public class WSCamera extends Activity {
 		System.setProperty("java.net.preferIPv6Addresses", "false");
 
 		initializeServer();
+		initializeUPnPServer();
 
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 		getWindow().requestFeature(Window.FEATURE_NO_TITLE);
@@ -87,6 +96,51 @@ public class WSCamera extends Activity {
 		HandlerList hl = new HandlerList();
 		hl.setHandlers(handlers.toArray(new Handler[]{}));
 		server.setHandler(hl);
+
+	}
+
+	private void initializeUPnPServer() {
+
+		SharedPreferences pref = getApplicationContext().getSharedPreferences("WSCamera", MODE_PRIVATE);
+		String deviceUUID = pref.getString("WSCamera", null);
+		if (deviceUUID != null) {
+			deviceUUID = UUID.randomUUID().toString();
+			Editor edit = pref.edit();
+			edit.putString("WSCamera", deviceUUID);
+			edit.commit();
+		}
+
+		String host;
+		try {
+			host = InetAddress.getLocalHost().getHostAddress();
+		} catch (UnknownHostException e) {
+			throw new RuntimeException(e);
+		}
+
+		String serverName = "Android/" + Build.VERSION.RELEASE + " UPnP/1.0 WSCamera/0.0.3";
+
+		upnpServer = new UPnPServer();
+
+		ArrayList<HashMap<String, String>> ssdpInfos = new ArrayList<HashMap<String, String>>();
+
+		{
+			HashMap<String, String> ssdp = new HashMap<String, String>();
+			ssdp.put("SERVER", serverName);
+			ssdp.put("SERVICE_TYPE", "urn:kanasansoft-com:service:WSCameraPage:1");
+			ssdp.put("SERVICE_NAME", "uuid:" + deviceUUID + "::urn:kanasansoft-com:service:WSCameraPage:1");
+			ssdp.put("LOCATION", "http://" + host + ":40320/webcamera/html/index.html");
+			ssdpInfos.add(ssdp);
+		}
+		{
+			HashMap<String, String> ssdp = new HashMap<String, String>();
+			ssdp.put("SERVER", serverName);
+			ssdp.put("SERVICE_TYPE", "urn:kanasansoft-com:service:WSCameraPushImage:1");
+			ssdp.put("SERVICE_NAME", "uuid:" + deviceUUID + "::urn:kanasansoft-com:service:WSCameraPushImage:1");
+			ssdp.put("LOCATION", "ws://" + host + ":40320/webcamera/ws");
+			ssdpInfos.add(ssdp);
+		}
+
+		upnpServer.setSSDPInfos(ssdpInfos);
 
 	}
 
@@ -222,6 +276,47 @@ public class WSCamera extends Activity {
 
 		public void onHandshake(FrameConnection connection) {
 		}
+	}
+
+	static class UPnPServer {
+
+		static String SSDP_MESSAGE_ALIVE =
+				"NOTIFY * HTTP/1.1\r\n" +
+				"HOST: 239.255.255.250:1900\r\n" +
+				"CACHE-CONTROL: max-age = 1800\r\n" +
+				"NT: %s\r\n" +
+				"NTS: ssdp:alive\r\n" +
+				"SERVER: %s\r\n" +
+				"USN: %s\r\n" +
+				"\r\n";
+
+		static String SSDP_MESSAGE_BYEBYE =
+				"NOTIFY * HTTP/1.1\r\n" +
+				"HOST: 239.255.255.250:1900\r\n" +
+				"NT: %s\r\n" +
+				"NTS: ssdp:alive\r\n" +
+				"USN: %s\r\n" +
+				"\r\n";
+
+		static String ResponseSSDPMessage =
+				"HTTP/1.1 200 OK\r\n" +
+				"CACHE-CONTROL: max-age = 1800\r\n" +
+				"EXT: \r\n" +
+				"LOCATION: %s\r\n" +
+				"SERVER: %s\r\n" +
+				"ST: %s\r\n" +
+				"USN: %s\r\n" +
+				"\r\n";
+
+		ArrayList<HashMap<String, String>> ssdpInfos = new ArrayList<HashMap<String, String>>();
+
+		UPnPServer() {
+		}
+
+		public void setSSDPInfos(ArrayList<HashMap<String, String>> ssdpInfos) {
+			this.ssdpInfos = ssdpInfos;
+		}
+
 	}
 
 }
