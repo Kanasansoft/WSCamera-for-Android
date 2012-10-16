@@ -5,6 +5,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.InterruptedIOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -358,7 +359,7 @@ public class WSCamera extends Activity {
 
 		public void stop() throws UnknownHostException, IOException {
 			udpserver.leave("239.255.255.250");
-			executor.shutdown();
+			executor.shutdownNow();
 		}
 
 		static class SSDPInformation extends HashMap<String, String> {
@@ -388,10 +389,15 @@ public class WSCamera extends Activity {
 		public void run() {
 			while (true) {
 				try {
+					socket.setSoTimeout(100);
 					socket.receive(packet);
 					handler.transfer(packet.getData(), packet.getAddress(), packet.getPort());
+				} catch (InterruptedIOException e) {
 				} catch (IOException e) {
 					e.printStackTrace();
+				}
+				if (Thread.interrupted()) {
+					break;
 				}
 			}
 		}
