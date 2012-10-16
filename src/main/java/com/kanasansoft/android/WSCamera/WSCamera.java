@@ -1,12 +1,25 @@
 package com.kanasansoft.android.WSCamera;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.DatagramPacket;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.MulticastSocket;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -20,6 +33,7 @@ import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
 
 import com.kanasansoft.android.AssetHandler;
+import com.kanasansoft.android.WSCamera.WSCamera.UPnPServer.SSDPInformation;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -110,30 +124,42 @@ public class WSCamera extends Activity {
 			edit.commit();
 		}
 
-		String host;
+		ArrayList<String> hosts = new ArrayList<String>();
 		try {
-			host = InetAddress.getLocalHost().getHostAddress();
-		} catch (UnknownHostException e) {
-			throw new RuntimeException(e);
+			Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+			while(interfaces.hasMoreElements()){
+				NetworkInterface network = interfaces.nextElement();
+				Enumeration<InetAddress> addresses = network.getInetAddresses();
+				while(addresses.hasMoreElements()){
+					String address = addresses.nextElement().getHostAddress();
+					if(!("0.0.0.0".equals(address) || "127.0.0.1".equals(address))){
+						hosts.add(address);
+					}
+				}
+			}
+		} catch (SocketException e) {
 		}
+		String host = hosts.isEmpty() ? "127.0.0.1" : hosts.get(0);
 
 		String serverName = "Android/" + Build.VERSION.RELEASE + " UPnP/1.0 WSCamera/0.0.3";
 
 		upnpServer = new UPnPServer();
 
-		ArrayList<HashMap<String, String>> ssdpInfos = new ArrayList<HashMap<String, String>>();
+		ArrayList<SSDPInformation> ssdpInfos = new ArrayList<SSDPInformation>();
 
 		{
-			HashMap<String, String> ssdp = new HashMap<String, String>();
+			SSDPInformation ssdp = new SSDPInformation();
 			ssdp.put("SERVER", serverName);
+			ssdp.put("DEVICE", "uuid:" + deviceUUID);
 			ssdp.put("SERVICE_TYPE", "urn:kanasansoft-com:service:WSCameraPage:1");
 			ssdp.put("SERVICE_NAME", "uuid:" + deviceUUID + "::urn:kanasansoft-com:service:WSCameraPage:1");
 			ssdp.put("LOCATION", "http://" + host + ":40320/webcamera/html/index.html");
 			ssdpInfos.add(ssdp);
 		}
 		{
-			HashMap<String, String> ssdp = new HashMap<String, String>();
+			SSDPInformation ssdp = new SSDPInformation();
 			ssdp.put("SERVER", serverName);
+			ssdp.put("DEVICE", "uuid:" + deviceUUID);
 			ssdp.put("SERVICE_TYPE", "urn:kanasansoft-com:service:WSCameraPushImage:1");
 			ssdp.put("SERVICE_NAME", "uuid:" + deviceUUID + "::urn:kanasansoft-com:service:WSCameraPushImage:1");
 			ssdp.put("LOCATION", "ws://" + host + ":40320/webcamera/ws");
@@ -157,6 +183,7 @@ public class WSCamera extends Activity {
 		super.onResume();
 		try {
 			server.start();
+			upnpServer.start();
 		} catch (Exception e) {
 			Log.e(TAG, e.getMessage(), e);
 		}
@@ -167,6 +194,7 @@ public class WSCamera extends Activity {
 		super.onPause();
 		try {
 			server.stop();
+			upnpServer.stop();
 		} catch (Exception e) {
 			Log.e(TAG, e.getMessage(), e);
 		}
@@ -176,8 +204,8 @@ public class WSCamera extends Activity {
 
 		public void onPreviewFrame(byte[] data, Camera camera) {
 			Parameters params = camera.getParameters();
-			int width = params.getPictureSize().width;
-			int height = params.getPictureSize().height;
+			int width = params.getPreviewSize().width;
+			int height = params.getPreviewSize().height;
 			YuvImage yuv = new YuvImage(
 				data,
 				params.getPreviewFormat(),
@@ -308,13 +336,181 @@ public class WSCamera extends Activity {
 				"USN: %s\r\n" +
 				"\r\n";
 
-		ArrayList<HashMap<String, String>> ssdpInfos = new ArrayList<HashMap<String, String>>();
+		ArrayList<SSDPInformation> ssdpInfos = new ArrayList<SSDPInformation>();
+
+		ExecutorService executor = null;
+		UDPServer udpserver = null;
 
 		UPnPServer() {
 		}
 
-		public void setSSDPInfos(ArrayList<HashMap<String, String>> ssdpInfos) {
+		public void setSSDPInfos(ArrayList<SSDPInformation> ssdpInfos) {
 			this.ssdpInfos = ssdpInfos;
+		}
+
+		public void start() throws IOException {
+			executor = Executors.newSingleThreadExecutor();
+			MSearchHandler handler = new MSearchHandler(ssdpInfos);
+			udpserver = new UDPServer(handler, 1900, 8192);
+			udpserver.join("239.255.255.250");
+			executor.execute(udpserver);
+		}
+
+		public void stop() throws UnknownHostException, IOException {
+			udpserver.leave("239.255.255.250");
+			executor.shutdown();
+		}
+
+		static class SSDPInformation extends HashMap<String, String> {
+			private static final long serialVersionUID = 1L;
+		}
+
+	}
+
+	static class UDPServer implements Runnable {
+
+		byte[] data;
+		UDPHandler handler;
+		MulticastSocket socket;
+		DatagramPacket packet;
+
+		public UDPServer(UDPHandler handler, int port) throws IOException {
+			this(handler, port, 1024);
+		}
+
+		public UDPServer(UDPHandler handler, int port, int bufferSize) throws IOException {
+			data = new byte[bufferSize];
+			this.handler = handler;
+			socket = new MulticastSocket(port);
+			packet = new DatagramPacket(data, data.length);
+		}
+
+		public void run() {
+			while (true) {
+				try {
+					socket.receive(packet);
+					handler.transfer(packet.getData(), packet.getAddress(), packet.getPort());
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+
+		void join(String address) throws UnknownHostException, IOException {
+			socket.joinGroup(InetAddress.getByName(address));
+		}
+
+		void leave(String address) throws UnknownHostException, IOException {
+			socket.leaveGroup(InetAddress.getByName(address));
+		}
+
+		static interface UDPHandler {
+			void transfer(byte[] data, InetAddress address, int port);
+		}
+
+	}
+
+	static class MSearchHandler implements UDPServer.UDPHandler {
+
+		private ArrayList<SSDPInformation> ssdpInfos;
+
+		public MSearchHandler(ArrayList<SSDPInformation> ssdpInfos) {
+			this.ssdpInfos = ssdpInfos;
+		}
+
+		public void transfer(byte[] data, InetAddress address, int port) {
+			ExecutorService executor = Executors.newSingleThreadExecutor();
+			executor.execute(new AssignHandler(ssdpInfos, data, address, port));
+		}
+
+		static private class AssignHandler implements Runnable {
+			ArrayList<SSDPInformation> ssdpInfos;
+			byte[] data;
+			InetAddress address;
+			int port;
+			AssignHandler(ArrayList<SSDPInformation> ssdpInfos, byte[] data, InetAddress address, int port) {
+				this.ssdpInfos = ssdpInfos;
+				this.data = data;
+				this.address = address;
+				this.port = port;
+			}
+			public void run() {
+				String man = null;
+				String mx = null;
+				String st = null;
+				BufferedReader br = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(data)), 8192);
+				try {
+					String requestLine = br.readLine();
+					if (requestLine == null || !requestLine.equals("M-SEARCH * HTTP/1.1")) {
+						return;
+					}
+					String str = null;
+					while((str = br.readLine()) != null){
+						if (str.startsWith("MAN: ")) {
+							man = str.substring(5);
+						} else if (str.startsWith("MX: ")) {
+							mx = str.substring(4);
+						} else if (str.startsWith("ST: ")){
+							st = str.substring(4);
+						}
+					}
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+				if (man == null || mx == null || st == null) {
+					return;
+				}
+				if (!man.equals("\"ssdp:discover\"")) {
+					return;
+				}
+				if (!mx.matches("^[1-9][0-9]*$")) {
+					return;
+				}
+				int mxnum = Integer.parseInt(mx, 10);
+				if (!(1 <= mxnum && mxnum <= 120)) {
+					return;
+				}
+				for (SSDPInformation ssdpinfo : ssdpInfos) {
+					if (
+							st.equals("ssdp:all") ||
+							st.equals(ssdpinfo.get("SERVICE_TYPE"))
+							) {
+						String message = String.format(
+								UPnPServer.ResponseSSDPMessage,
+								ssdpinfo.get("LOCATION"),
+								ssdpinfo.get("SERVER"),
+								ssdpinfo.get("SERVICE_TYPE"),
+								ssdpinfo.get("SERVICE_NAME")
+						);
+						ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+						executor.schedule(new UPnPSender(message, address, port), (long)(mxnum * 1000 * Math.random()), TimeUnit.MILLISECONDS);
+						;
+					}
+				}
+			}
+		}
+
+		static private class UPnPSender implements Runnable {
+			private String message;
+			private InetAddress address;
+			private int port;
+			UPnPSender(String message, InetAddress address, int port) {
+				this.message = message;
+				this.address = address;
+				this.port = port;
+			}
+			public void run() {
+				byte[] data = message.getBytes();
+				InetSocketAddress isAddress = new InetSocketAddress(address, port);
+				try {
+					DatagramPacket packet = new DatagramPacket(data, data.length, isAddress);
+					new MulticastSocket().send(packet);
+				} catch (SocketException e) {
+					throw new RuntimeException(e);
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			}
 		}
 
 	}
