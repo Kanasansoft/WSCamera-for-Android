@@ -73,6 +73,7 @@ public class WSCamera extends Activity {
 
 		// http://code.google.com/p/android/issues/detail?id=9431
 		System.setProperty("java.net.preferIPv6Addresses", "false");
+		System.setProperty("java.net.preferIPv4Stack", "true");
 
 		initializeServer();
 		initializeUPnPServer();
