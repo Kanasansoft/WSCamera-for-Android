@@ -154,7 +154,7 @@ public class WSCamera extends Activity {
 			ssdp.put("DEVICE", "uuid:" + deviceUUID);
 			ssdp.put("SERVICE_TYPE", "urn:kanasansoft-com:service:WSCameraPage:1");
 			ssdp.put("SERVICE_NAME", "uuid:" + deviceUUID + "::urn:kanasansoft-com:service:WSCameraPage:1");
-			ssdp.put("LOCATION", "http://" + host + ":40320/webcamera/html/index.html");
+			ssdp.put("LOCATION", "http://" + host + ":40320/wscamera/html/index.html");
 			ssdpInfos.add(ssdp);
 		}
 		{
@@ -163,7 +163,7 @@ public class WSCamera extends Activity {
 			ssdp.put("DEVICE", "uuid:" + deviceUUID);
 			ssdp.put("SERVICE_TYPE", "urn:kanasansoft-com:service:WSCameraPushImage:1");
 			ssdp.put("SERVICE_NAME", "uuid:" + deviceUUID + "::urn:kanasansoft-com:service:WSCameraPushImage:1");
-			ssdp.put("LOCATION", "ws://" + host + ":40320/webcamera/ws");
+			ssdp.put("LOCATION", "ws://" + host + ":40320/wscamera/ws");
 			ssdpInfos.add(ssdp);
 		}
 
