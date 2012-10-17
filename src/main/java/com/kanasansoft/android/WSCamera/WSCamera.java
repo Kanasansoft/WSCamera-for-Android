@@ -119,7 +119,7 @@ public class WSCamera extends Activity {
 
 		SharedPreferences pref = getApplicationContext().getSharedPreferences("WSCamera", MODE_PRIVATE);
 		String deviceUUID = pref.getString("WSCamera", null);
-		if (deviceUUID != null) {
+		if (deviceUUID == null) {
 			deviceUUID = UUID.randomUUID().toString();
 			Editor edit = pref.edit();
 			edit.putString("WSCamera", deviceUUID);
