@@ -317,6 +317,7 @@ public class WSCamera extends Activity {
 				"NTS: ssdp:alive\r\n" +
 				"SERVER: %s\r\n" +
 				"USN: %s\r\n" +
+				"Content-Length: 0\r\n" +
 				"\r\n";
 
 		static String SSDP_MESSAGE_BYEBYE =
@@ -325,6 +326,7 @@ public class WSCamera extends Activity {
 				"NT: %s\r\n" +
 				"NTS: ssdp:alive\r\n" +
 				"USN: %s\r\n" +
+				"Content-Length: 0\r\n" +
 				"\r\n";
 
 		static String ResponseSSDPMessage =
@@ -335,6 +337,7 @@ public class WSCamera extends Activity {
 				"SERVER: %s\r\n" +
 				"ST: %s\r\n" +
 				"USN: %s\r\n" +
+				"Content-Length: 0\r\n" +
 				"\r\n";
 
 		ArrayList<SSDPInformation> ssdpInfos = new ArrayList<SSDPInformation>();
