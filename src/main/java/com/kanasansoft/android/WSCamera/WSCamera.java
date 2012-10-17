@@ -153,6 +153,17 @@ public class WSCamera extends Activity {
 			SSDPInformation ssdp = new SSDPInformation();
 			ssdp.put("SERVER", serverName);
 			ssdp.put("DEVICE", "uuid:" + deviceUUID);
+			ssdp.put("SERVICE_TYPE", "urn:schemas-webintents-org:service:WebIntents:1");
+			ssdp.put("SERVICE_NAME", "uuid:" + deviceUUID + "::urn:schemas-webintents-org:service:WebIntents:1");
+			ssdp.put("LOCATION", "http://" + host + ":40320/");
+			ssdp.addOption("action.webintents.org: http://webintents.org/pick");
+			ssdp.addOption("location.webintents.org: /wscamera/html/index.html");
+			ssdpInfos.add(ssdp);
+		}
+		{
+			SSDPInformation ssdp = new SSDPInformation();
+			ssdp.put("SERVER", serverName);
+			ssdp.put("DEVICE", "uuid:" + deviceUUID);
 			ssdp.put("SERVICE_TYPE", "urn:kanasansoft-com:service:WSCameraPage:1");
 			ssdp.put("SERVICE_NAME", "uuid:" + deviceUUID + "::urn:kanasansoft-com:service:WSCameraPage:1");
 			ssdp.put("LOCATION", "http://" + host + ":40320/wscamera/html/index.html");
@@ -318,6 +329,7 @@ public class WSCamera extends Activity {
 				"NTS: ssdp:alive\r\n" +
 				"SERVER: %s\r\n" +
 				"USN: %s\r\n" +
+				"%s" +
 				"Content-Length: 0\r\n" +
 				"\r\n";
 
@@ -327,6 +339,7 @@ public class WSCamera extends Activity {
 				"NT: %s\r\n" +
 				"NTS: ssdp:alive\r\n" +
 				"USN: %s\r\n" +
+				"%s" +
 				"Content-Length: 0\r\n" +
 				"\r\n";
 
@@ -338,6 +351,7 @@ public class WSCamera extends Activity {
 				"SERVER: %s\r\n" +
 				"ST: %s\r\n" +
 				"USN: %s\r\n" +
+				"%s" +
 				"Content-Length: 0\r\n" +
 				"\r\n";
 
@@ -368,6 +382,10 @@ public class WSCamera extends Activity {
 
 		static class SSDPInformation extends HashMap<String, String> {
 			private static final long serialVersionUID = 1L;
+			private ArrayList<String> options = new ArrayList<String>();
+			void addOption(String option) {
+				options.add(option);
+			}
 		}
 
 	}
@@ -485,12 +503,18 @@ public class WSCamera extends Activity {
 							st.equals("ssdp:all") ||
 							st.equals(ssdpinfo.get("SERVICE_TYPE"))
 							) {
+						ArrayList<String> options = ssdpinfo.options;
+						StringBuilder optionBuilder = new StringBuilder();
+						for (String option : options) {
+							optionBuilder.append(option + "\r\n");
+						}
 						String message = String.format(
 								UPnPServer.ResponseSSDPMessage,
 								ssdpinfo.get("LOCATION"),
 								ssdpinfo.get("SERVER"),
 								ssdpinfo.get("SERVICE_TYPE"),
-								ssdpinfo.get("SERVICE_NAME")
+								ssdpinfo.get("SERVICE_NAME"),
+								optionBuilder.toString()
 						);
 						ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 						executor.schedule(new UPnPSender(message, address, port), (long)(mxnum * 1000 * Math.random()), TimeUnit.MILLISECONDS);
