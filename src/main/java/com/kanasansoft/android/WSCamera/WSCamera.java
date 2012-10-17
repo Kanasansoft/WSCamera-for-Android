@@ -126,23 +126,6 @@ public class WSCamera extends Activity {
 			edit.commit();
 		}
 
-		ArrayList<String> hosts = new ArrayList<String>();
-		try {
-			Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-			while(interfaces.hasMoreElements()){
-				NetworkInterface network = interfaces.nextElement();
-				Enumeration<InetAddress> addresses = network.getInetAddresses();
-				while(addresses.hasMoreElements()){
-					String address = addresses.nextElement().getHostAddress();
-					if(!("0.0.0.0".equals(address) || "127.0.0.1".equals(address))){
-						hosts.add(address);
-					}
-				}
-			}
-		} catch (SocketException e) {
-		}
-		String host = hosts.isEmpty() ? "127.0.0.1" : hosts.get(0);
-
 		String serverName = "Android/" + Build.VERSION.RELEASE + " UPnP/1.0 WSCamera/0.0.3";
 
 		upnpServer = new UPnPServer();
@@ -155,7 +138,7 @@ public class WSCamera extends Activity {
 			ssdp.put("DEVICE", "uuid:" + deviceUUID);
 			ssdp.put("SERVICE_TYPE", "urn:schemas-webintents-org:service:WebIntents:1");
 			ssdp.put("SERVICE_NAME", "uuid:" + deviceUUID + "::urn:schemas-webintents-org:service:WebIntents:1");
-			ssdp.put("LOCATION", "http://" + host + ":40320/");
+			ssdp.put("LOCATION", "http://%s:40320/");
 			ssdp.addOption("action.webintents.org: http://webintents.org/pick");
 			ssdp.addOption("location.webintents.org: /wscamera/html/index.html");
 			ssdpInfos.add(ssdp);
@@ -166,7 +149,7 @@ public class WSCamera extends Activity {
 			ssdp.put("DEVICE", "uuid:" + deviceUUID);
 			ssdp.put("SERVICE_TYPE", "urn:kanasansoft-com:service:WSCameraPage:1");
 			ssdp.put("SERVICE_NAME", "uuid:" + deviceUUID + "::urn:kanasansoft-com:service:WSCameraPage:1");
-			ssdp.put("LOCATION", "http://" + host + ":40320/wscamera/html/index.html");
+			ssdp.put("LOCATION", "http://%s:40320/wscamera/html/index.html");
 			ssdpInfos.add(ssdp);
 		}
 		{
@@ -175,7 +158,7 @@ public class WSCamera extends Activity {
 			ssdp.put("DEVICE", "uuid:" + deviceUUID);
 			ssdp.put("SERVICE_TYPE", "urn:kanasansoft-com:service:WSCameraPushImage:1");
 			ssdp.put("SERVICE_NAME", "uuid:" + deviceUUID + "::urn:kanasansoft-com:service:WSCameraPushImage:1");
-			ssdp.put("LOCATION", "ws://" + host + ":40320/wscamera/ws");
+			ssdp.put("LOCATION", "ws://%s:40320/wscamera/ws");
 			ssdpInfos.add(ssdp);
 		}
 
@@ -463,10 +446,13 @@ public class WSCamera extends Activity {
 				this.port = port;
 			}
 			public void run() {
+
 				String man = null;
 				String mx = null;
 				String st = null;
+
 				BufferedReader br = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(data)), 8192);
+
 				try {
 					String requestLine = br.readLine();
 					if (requestLine == null || !requestLine.equals("M-SEARCH * HTTP/1.1")) {
@@ -485,6 +471,7 @@ public class WSCamera extends Activity {
 				} catch (IOException e) {
 					throw new RuntimeException(e);
 				}
+
 				if (man == null || mx == null || st == null) {
 					return;
 				}
@@ -498,6 +485,24 @@ public class WSCamera extends Activity {
 				if (!(1 <= mxnum && mxnum <= 120)) {
 					return;
 				}
+
+				ArrayList<String> hosts = new ArrayList<String>();
+				try {
+					Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+					while(interfaces.hasMoreElements()){
+						NetworkInterface network = interfaces.nextElement();
+						Enumeration<InetAddress> addresses = network.getInetAddresses();
+						while(addresses.hasMoreElements()){
+							String address = addresses.nextElement().getHostAddress();
+							if(!("0.0.0.0".equals(address) || "127.0.0.1".equals(address))){
+								hosts.add(address);
+							}
+						}
+					}
+				} catch (SocketException e) {
+				}
+				String host = hosts.isEmpty() ? "127.0.0.1" : hosts.get(0);
+
 				for (SSDPInformation ssdpinfo : ssdpInfos) {
 					if (
 							st.equals("ssdp:all") ||
@@ -510,7 +515,7 @@ public class WSCamera extends Activity {
 						}
 						String message = String.format(
 								UPnPServer.ResponseSSDPMessage,
-								ssdpinfo.get("LOCATION"),
+								String.format(ssdpinfo.get("LOCATION"), host),
 								ssdpinfo.get("SERVER"),
 								ssdpinfo.get("SERVICE_TYPE"),
 								ssdpinfo.get("SERVICE_NAME"),
@@ -521,6 +526,7 @@ public class WSCamera extends Activity {
 						;
 					}
 				}
+
 			}
 		}
 
