@@ -6,6 +6,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -236,6 +238,27 @@ public class WSCamera extends Activity {
 		public void surfaceCreated(SurfaceHolder holder) {
 
 			camera = Camera.open();
+			if (camera == null) {
+				try {
+					Method getnum = Camera.class.getMethod("getNumberOfCameras", new Class[]{});
+					int num = (int)(Integer)getnum.invoke(null, new Object[]{});
+					for (int i = 0; i < num; i++) {
+						Method open = Camera.class.getMethod("open", new Class[]{int.class});
+						camera = (Camera)open.invoke(null, new Object[]{Integer.valueOf(i)});
+						if (camera != null) {
+							break;
+						}
+					}
+				} catch (NoSuchMethodException e) {
+				} catch (IllegalArgumentException e) {
+				} catch (IllegalAccessException e) {
+				} catch (InvocationTargetException e) {
+				}
+			}
+
+			if (camera == null) {
+				return;
+			}
 
 			Parameters params = camera.getParameters();
 			System.out.println(params.getPreviewFormat());
@@ -253,6 +276,10 @@ public class WSCamera extends Activity {
 		}
 
 		public void surfaceDestroyed(SurfaceHolder holder) {
+
+			if (camera == null) {
+				return;
+			}
 
 			camera.stopPreview();
 			camera.setPreviewCallback(null);
