@@ -1,3 +1,13 @@
-body {
-	margin:10px;
+html {
+	background-color : #000000;
+}
+h1 {
+	text-align : center;
+	margin : 0 auto;
+	color : #cccccc;
+	text-shadow : 0px 0px 5px #ffffff;
+}
+#display {
+	margin : 0 auto;
+	display : block;
 }

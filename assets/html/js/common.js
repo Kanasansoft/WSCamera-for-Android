@@ -1,6 +1,12 @@
 var display;
 var ws;
 
+function initCrossBrowser() {
+	window.Intent = window.Intent || window.WebKitIntent;
+	window.navigator.startActivity = window.navigator.startActivity || window.navigator.webkitStartActivity;
+	window.intent = window.intent || window.webkitIntent;
+}
+
 var createObjectURL =
 	window.URL       && window.URL.createObjectURL       ? function (file) { return window.URL.createObjectURL(file);       } :
 	window.webkitURL && window.webkitURL.createObjectURL ? function (file) { return window.webkitURL.createObjectURL(file); } :
@@ -24,7 +30,31 @@ function onunload() {
 	}
 }
 
+function setupWebIntents() {
+	if (!intent) {
+		return;
+	}
+	var textNode = document.createTextNode("When you click you can capture this video.");
+	var heading = document.createElement("h1");
+	var body = document.getElementById("body");
+	heading.appendChild(textNode);
+	body.insertBefore(heading, body.firstChild);
+	display.addEventListener(
+		"click",
+		function(){
+			if (display.src == "") {
+				return;
+			}
+			intent.postResult(display.src);
+		},
+		false
+	);
+	display.style.cursor = "pointer";
+}
+
 function initialize() {
+
+	initCrossBrowser();
 
 	display = document.getElementById("display");
 
@@ -36,6 +66,8 @@ function initialize() {
 	ws    .addEventListener("close"  , onclose  , false);
 	ws    .addEventListener("message", onmessage, false);
 	window.addEventListener("unload" , onunload , false);
+
+	setupWebIntents();
 
 }
 
