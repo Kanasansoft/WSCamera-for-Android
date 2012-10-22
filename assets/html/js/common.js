@@ -45,7 +45,23 @@ function setupWebIntents() {
 			if (display.src == "") {
 				return;
 			}
-			intent.postResult(display.src);
+			var computedStyle = document.defaultView.getComputedStyle(display, "");
+			var canvas = document.createElement("canvas");
+			var height = parseInt(computedStyle.height);
+			var width = parseInt(computedStyle.width);
+			canvas.height = height;
+			canvas.width = width;
+			var context = canvas.getContext('2d');
+			var image = new Image();
+			image.addEventListener(
+				"load",
+				function(){
+					context.drawImage(image, 0, 0, width, height);
+					intent.postResult(canvas.toDataURL("image/jpeg"));
+				},
+				false
+			);
+			image.src = display.src;
 		},
 		false
 	);
