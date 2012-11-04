@@ -520,9 +520,9 @@ public class WSCamera extends Activity {
 						NetworkInterface network = interfaces.nextElement();
 						Enumeration<InetAddress> addresses = network.getInetAddresses();
 						while(addresses.hasMoreElements()){
-							String address = addresses.nextElement().getHostAddress();
-							if(!("0.0.0.0".equals(address) || "127.0.0.1".equals(address))){
-								hosts.add(address);
+							InetAddress buffer = addresses.nextElement();
+							if(!(buffer.isLoopbackAddress() || buffer.isAnyLocalAddress())){
+								hosts.add(buffer.getHostAddress());
 							}
 						}
 					}
