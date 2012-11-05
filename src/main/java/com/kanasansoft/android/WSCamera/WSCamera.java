@@ -557,29 +557,29 @@ public class WSCamera extends Activity {
 			}
 		}
 
-		static private class UPnPSender implements Runnable {
-			private String message;
-			private InetAddress address;
-			private int port;
-			UPnPSender(String message, InetAddress address, int port) {
-				this.message = message;
-				this.address = address;
-				this.port = port;
-			}
-			public void run() {
-				byte[] data = message.getBytes();
-				InetSocketAddress isAddress = new InetSocketAddress(address, port);
-				try {
-					DatagramPacket packet = new DatagramPacket(data, data.length, isAddress);
-					new MulticastSocket().send(packet);
-				} catch (SocketException e) {
-					throw new RuntimeException(e);
-				} catch (IOException e) {
-					throw new RuntimeException(e);
-				}
+	}
+
+	static private class UPnPSender implements Runnable {
+		private String message;
+		private InetAddress address;
+		private int port;
+		UPnPSender(String message, InetAddress address, int port) {
+			this.message = message;
+			this.address = address;
+			this.port = port;
+		}
+		public void run() {
+			byte[] data = message.getBytes();
+			InetSocketAddress isAddress = new InetSocketAddress(address, port);
+			try {
+				DatagramPacket packet = new DatagramPacket(data, data.length, isAddress);
+				new MulticastSocket().send(packet);
+			} catch (SocketException e) {
+				throw new RuntimeException(e);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
 			}
 		}
-
 	}
 
 }
