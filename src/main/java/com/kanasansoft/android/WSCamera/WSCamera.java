@@ -513,22 +513,8 @@ public class WSCamera extends Activity {
 					return;
 				}
 
-				ArrayList<String> hosts = new ArrayList<String>();
-				try {
-					Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-					while(interfaces.hasMoreElements()){
-						NetworkInterface network = interfaces.nextElement();
-						Enumeration<InetAddress> addresses = network.getInetAddresses();
-						while(addresses.hasMoreElements()){
-							InetAddress buffer = addresses.nextElement();
-							if(!(buffer.isLoopbackAddress() || buffer.isAnyLocalAddress())){
-								hosts.add(buffer.getHostAddress());
-							}
-						}
-					}
-				} catch (SocketException e) {
-				}
-				String host = hosts.isEmpty() ? "127.0.0.1" : hosts.get(0);
+				ArrayList<InetAddress> hosts = NetworkUtility.getSelfAddress();
+				String host = hosts.isEmpty() ? "127.0.0.1" : hosts.get(0).getHostAddress();
 
 				for (SSDPInformation ssdpinfo : ssdpInfos) {
 					if (
@@ -580,6 +566,29 @@ public class WSCamera extends Activity {
 				throw new RuntimeException(e);
 			}
 		}
+	}
+
+}
+
+class NetworkUtility {
+
+	static ArrayList<InetAddress> getSelfAddress() {
+		ArrayList<InetAddress> hosts = new ArrayList<InetAddress>();
+		try {
+			Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+			while(interfaces.hasMoreElements()){
+				NetworkInterface network = interfaces.nextElement();
+				Enumeration<InetAddress> addresses = network.getInetAddresses();
+				while(addresses.hasMoreElements()){
+					InetAddress buffer = addresses.nextElement();
+					if(!(buffer.isLoopbackAddress() || buffer.isAnyLocalAddress())){
+						hosts.add(buffer);
+					}
+				}
+			}
+		} catch (SocketException e) {
+		}
+		return hosts;
 	}
 
 }
