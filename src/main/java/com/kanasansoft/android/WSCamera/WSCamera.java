@@ -130,7 +130,7 @@ public class WSCamera extends Activity {
 			edit.commit();
 		}
 
-		String serverName = "Android/" + Build.VERSION.RELEASE + " UPnP/1.0 WSCamera/0.0.3";
+		String serverName = "Android/" + Build.VERSION.RELEASE + " UPnP/1.0 WSCamera/0.0.6";
 
 		upnpServer = new UPnPServer();
 
