@@ -9,6 +9,8 @@ import java.io.InterruptedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.DatagramPacket;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.MulticastSocket;
@@ -514,7 +516,13 @@ public class WSCamera extends Activity {
 				}
 
 				ArrayList<InetAddress> hosts = NetworkUtility.getSelfAddress();
-				String host = hosts.isEmpty() ? "127.0.0.1" : hosts.get(0).getHostAddress();
+				ArrayList<Inet4Address> v4hosts = new ArrayList<Inet4Address>();
+				for (InetAddress address : hosts) {
+					if (address instanceof Inet4Address) {
+						v4hosts.add((Inet4Address)address);
+					}
+				}
+				String host = v4hosts.isEmpty() ? "127.0.0.1" : v4hosts.get(0).getHostAddress();
 
 				for (SSDPInformation ssdpinfo : ssdpInfos) {
 					if (
